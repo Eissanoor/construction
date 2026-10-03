@@ -1,0 +1,27 @@
+{
+  "name": "construction-site-cms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing page CMS API backed by a single LandingPage collection",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/seed/seedLandingPage.js",
+    "check": "node src/seed/checkSeed.js",
+    "test:api": "node src/seed/apiCheck.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "joi": "^17.13.3",
+    "mongoose": "^8.19.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
