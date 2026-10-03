@@ -98,14 +98,75 @@ Validation errors add an `errors` array:
 
 | Status | When |
 | --- | --- |
-| 200 | Read, update, delete, status, reorder |
-| 201 | Section created |
-| 400 | Invalid body or unknown `sectionKey` |
+| 200 | Read, update, delete, status, reorder, image delete |
+| 201 | Section created, image uploaded |
+| 400 | Invalid body, unknown `sectionKey`, or rejected file |
 | 404 | Section or route not found |
 | 409 | `sectionKey` already exists |
-| 500 | Unexpected server error |
+| 500 | Cloudinary is not configured, or an unexpected server error |
+| 502 | Cloudinary rejected the upload or delete |
 
-Image fields are strings (`/uploads/commercial.jpg` or an absolute URL). Nested `button`, `items`, and `settings` are replaced as a whole when sent on update. `sectionKey` cannot be changed. `_id`, `createdAt`, and `updatedAt` are ignored if a client sends the document back.
+Image fields store a Cloudinary URL in `image` and the Cloudinary id in `imagePublicId` (or `logo` / `logoPublicId` inside settings). A local path still works, and those files are left untouched. Nested `button`, `items`, and `settings` are replaced as a whole when sent on update. `sectionKey` cannot be changed. `_id`, `createdAt`, and `updatedAt` are ignored if a client sends the document back.
+
+## Images
+
+Add your [Cloudinary](https://cloudinary.com/) credentials to `.env`:
+
+```text
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_FOLDER=landing-page
+```
+
+The cloud name, API key, and API secret are on the Cloudinary dashboard. Uploads are stored under `landing-page`, optionally inside the section key (`landing-page/hero/...`).
+
+Upload:
+
+```powershell
+curl.exe -X POST http://localhost:5000/api/uploads -F "sectionKey=hero" -F "image=@C:\path\to\photo.jpg"
+```
+
+`201`
+
+```json
+{
+  "status": true,
+  "message": "Image uploaded successfully",
+  "data": {
+    "url": "https://res.cloudinary.com/your-cloud/image/upload/v1/landing-page/hero/photo.jpg",
+    "publicId": "landing-page/hero/photo",
+    "width": 1600,
+    "height": 900,
+    "format": "jpg",
+    "bytes": 240112
+  }
+}
+```
+
+Save `url` into the section `image` field and `publicId` into `imagePublicId`, then `PUT` the section. Item images and `settings.logo` use the same pair (`image` / `imagePublicId`, `logo` / `logoPublicId`).
+
+Replacing or clearing an image on update deletes the previous Cloudinary file. Deleting a section deletes every Cloudinary file still referenced by that section. Files outside the `landing-page` folder are not deleted.
+
+Delete one uploaded file directly:
+
+```powershell
+curl.exe -X DELETE http://localhost:5000/api/uploads -H "Content-Type: application/json" -d '{"publicId":"landing-page/hero/photo"}'
+```
+
+`200`
+
+```json
+{
+  "status": true,
+  "message": "Image deleted successfully",
+  "data": {
+    "publicId": "landing-page/hero/photo"
+  }
+}
+```
+
+Accepted files are JPEG, PNG, WEBP, GIF, and AVIF, up to 5MB.
 
 The examples below show the fields that matter for each call. A real response also includes the rest of the section document, including empty defaults and timestamps.
 

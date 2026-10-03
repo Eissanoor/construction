@@ -30,6 +30,9 @@ const image = (name, label, extra = {}) => ({
   name,
   component: "ImageUploader",
   label,
+  uploadEndpoint: "/api/uploads",
+  uploadField: "image",
+  publicIdField: `${name}PublicId`,
   ...extra,
 });
 
@@ -69,13 +72,13 @@ const serviceItemSchema = Joi.object({
   number: Joi.string().trim().allow("").max(20),
   title: Joi.string().trim().min(1).max(200).required(),
   description: Joi.string().allow("").max(5000),
-  image: Joi.string().trim().allow("").max(2000),
+  image: Joi.string().trim().allow("").max(4000),
 }).unknown(true);
 
 const projectItemSchema = Joi.object({
   title: Joi.string().trim().min(1).max(200).required(),
   description: Joi.string().allow("").max(5000),
-  image: Joi.string().trim().allow("").max(2000),
+  image: Joi.string().trim().allow("").max(4000),
   category: Joi.string().trim().allow("").max(120),
   link: Joi.string().trim().allow("").max(2000),
 }).unknown(true);
@@ -97,7 +100,7 @@ const testimonialItemSchema = Joi.object({
   position: Joi.string().trim().allow("").max(120),
   company: Joi.string().trim().allow("").max(160),
   message: Joi.string().min(1).max(5000).required(),
-  image: Joi.string().trim().allow("").max(2000),
+  image: Joi.string().trim().allow("").max(4000),
 }).unknown(true);
 
 const contactItemSchema = Joi.object({
@@ -113,7 +116,7 @@ const footerItemSchema = Joi.object({
 }).unknown(true);
 
 const headerSettingsSchema = Joi.object({
-  logo: Joi.string().trim().allow("").max(2000),
+  logo: Joi.string().trim().allow("").max(4000),
   phone: Joi.string().trim().allow("").max(50),
   email: Joi.string().trim().allow("").max(200),
 }).unknown(true);
@@ -128,7 +131,7 @@ const contactSettingsSchema = Joi.object({
 
 const footerSettingsSchema = Joi.object({
   copyright: Joi.string().trim().allow("").max(300),
-  logo: Joi.string().trim().allow("").max(2000),
+  logo: Joi.string().trim().allow("").max(4000),
 }).unknown(true);
 
 const SECTION_DEFINITIONS = {

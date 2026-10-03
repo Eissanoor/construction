@@ -102,7 +102,8 @@ const buildSchema = (definition, mode) => {
       required: isRequired("description"),
       nonEmpty: cannotBeEmpty("description"),
     }),
-    image: shortText(2000, { required: isRequired("image"), nonEmpty: cannotBeEmpty("image") }),
+    image: shortText(4000, { required: isRequired("image"), nonEmpty: cannotBeEmpty("image") }),
+    imagePublicId: shortText(500),
     button: buttonSchema(isCreate),
     items: Joi.array()
       .items(definition.itemSchema || Joi.object().unknown(true))

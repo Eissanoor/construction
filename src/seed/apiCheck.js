@@ -238,6 +238,40 @@ const start = async () => {
       servicesConfig.fields.some((field) => field.component === "SortableItems"),
       "services config drives the items editor"
     );
+    const heroImage = config.json.data
+      .find((section) => section.sectionKey === "hero")
+      .fields.find((field) => field.name === "image");
+    assert(heroImage.uploadEndpoint === "/api/uploads", "image field points at the upload route");
+    assert(heroImage.publicIdField === "imagePublicId", "image field keeps a Cloudinary public id");
+
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64"
+    );
+    const uploadForm = new FormData();
+    uploadForm.append("sectionKey", "hero");
+    uploadForm.append("image", new Blob([png], { type: "image/png" }), "pixel.png");
+    const uploadResponse = await fetch(`${base}/api/uploads`, { method: "POST", body: uploadForm });
+    const uploadJson = await uploadResponse.json();
+    const cloudinaryReady = Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET
+    );
+    if (cloudinaryReady) {
+      assert(uploadResponse.status === 201 && uploadJson.data.publicId.startsWith("landing-page/hero/"), "uploads to Cloudinary", uploadJson);
+      const removedImage = await request("DELETE", "/api/uploads", { publicId: uploadJson.data.publicId });
+      assert(removedImage.status === 200 && removedImage.json.data.publicId === uploadJson.data.publicId, "deletes the Cloudinary image");
+    } else {
+      assert(uploadResponse.status === 500 && uploadJson.message === "Cloudinary is not configured", "upload requires Cloudinary", uploadJson);
+    }
+
+    const textForm = new FormData();
+    textForm.append("image", new Blob(["hello"], { type: "text/plain" }), "notes.txt");
+    const textUpload = await fetch(`${base}/api/uploads`, { method: "POST", body: textForm });
+    const textJson = await textUpload.json();
+    assert(textUpload.status === 400, "rejects a non-image upload", textJson);
+
+    const missingFile = await request("DELETE", "/api/uploads", {});
+    assert(missingFile.status === 400 && missingFile.json.status === false, "image delete requires an id");
 
     const removed = await request("DELETE", "/api/landing-page/services");
     assert(removed.status === 200 && removed.json.data.sectionKey === "services", "deletes a section");

@@ -40,6 +40,11 @@ const landingPageSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    imagePublicId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     button: {
       text: {
         type: String,

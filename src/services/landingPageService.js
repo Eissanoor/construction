@@ -1,8 +1,22 @@
 const LandingPage = require("../models/LandingPage");
 const ApiError = require("../utils/ApiError");
+const { isConfigured } = require("../config/cloudinary");
 const { getEditorConfig } = require("../config/sectionConfig");
+const {
+  collectManagedIds,
+  deleteManagedImages,
+  normalizeManagedImages,
+  removedManagedIds,
+} = require("./mediaService");
+
+const assertCloudinaryReady = (publicIds) => {
+  if (publicIds.length > 0 && !isConfigured()) {
+    throw new ApiError(500, "Cloudinary is not configured");
+  }
+};
 
 const createSection = async (payload) => {
+  normalizeManagedImages(payload);
   const exists = await LandingPage.exists({ sectionKey: payload.sectionKey });
 
   if (exists) {
@@ -28,6 +42,16 @@ const getSectionByKey = async (sectionKey) => {
 };
 
 const updateSection = async (sectionKey, payload) => {
+  const existing = await LandingPage.findOne({ sectionKey }).lean();
+
+  if (!existing) {
+    throw new ApiError(404, "Landing page section not found");
+  }
+
+  normalizeManagedImages(payload);
+  const removed = removedManagedIds(existing, { ...existing, ...payload });
+  assertCloudinaryReady(removed);
+
   const section = await LandingPage.findOneAndUpdate(
     { sectionKey },
     { $set: payload },
@@ -38,16 +62,27 @@ const updateSection = async (sectionKey, payload) => {
     throw new ApiError(404, "Landing page section not found");
   }
 
+  await deleteManagedImages(removed);
   return section;
 };
 
 const deleteSection = async (sectionKey) => {
+  const existing = await LandingPage.findOne({ sectionKey }).lean();
+
+  if (!existing) {
+    throw new ApiError(404, "Landing page section not found");
+  }
+
+  const removed = [...collectManagedIds(existing)];
+  assertCloudinaryReady(removed);
+
   const section = await LandingPage.findOneAndDelete({ sectionKey }).lean();
 
   if (!section) {
     throw new ApiError(404, "Landing page section not found");
   }
 
+  await deleteManagedImages(removed);
   return section;
 };
 

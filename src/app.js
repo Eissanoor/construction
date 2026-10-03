@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { adminRouter, publicRouter } = require("./routes/landingPageRoutes");
+const uploadRouter = require("./routes/uploadRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const { sendError } = require("./utils/apiResponse");
 
@@ -22,6 +23,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/landing-page", adminRouter);
 app.use("/api/public/landing-page", publicRouter);
+app.use("/api/uploads", uploadRouter);
 
 app.use((req, res) => {
   return sendError(res, 404, "Route not found");
