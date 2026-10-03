@@ -3,24 +3,27 @@ const ApiError = require("../utils/ApiError");
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 
-const uploader = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 1,
-  },
-  fileFilter: (req, file, callback) => {
-    if (!ALLOWED_TYPES.has(file.mimetype)) {
-      callback(new ApiError(400, "Only JPEG, PNG, WEBP, GIF, and AVIF images can be uploaded"));
-      return;
-    }
+const fileFilter = (req, file, callback) => {
+  if (!ALLOWED_TYPES.has(file.mimetype)) {
+    callback(new ApiError(400, "Only JPEG, PNG, WEBP, GIF, and AVIF images can be uploaded"));
+    return;
+  }
 
-    callback(null, true);
-  },
-});
+  callback(null, true);
+};
 
-const uploadImage = (req, res, next) => {
-  uploader.single("image")(req, res, (error) => {
+const createUploader = (files) =>
+  multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024,
+      files,
+    },
+    fileFilter,
+  });
+
+const handleUpload = (middleware) => (req, res, next) => {
+  middleware(req, res, (error) => {
     if (!error) {
       next();
       return;
@@ -41,4 +44,7 @@ const uploadImage = (req, res, next) => {
   });
 };
 
-module.exports = { uploadImage };
+const uploadImage = handleUpload(createUploader(1).single("image"));
+const uploadSectionFiles = handleUpload(createUploader(30).any());
+
+module.exports = { uploadImage, uploadSectionFiles };

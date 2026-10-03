@@ -323,6 +323,50 @@ const start = async () => {
     const missingFile = await request("DELETE", "/api/uploads", {});
     assert(missingFile.status === 400 && missingFile.json.status === false, "image delete requires an id");
 
+    const projectForm = new FormData();
+    projectForm.append("sectionKey", "projects");
+    projectForm.append("sectionName", "Projects");
+    projectForm.append("order", "4");
+    projectForm.append("title", "Selected work");
+    projectForm.append("description", "A sample of recently completed buildings.");
+    projectForm.append(
+      "items",
+      JSON.stringify([
+        {
+          title: "Harbor House",
+          category: "Residential",
+          description: "A four-storey residential building.",
+          image: "",
+          link: "",
+        },
+      ])
+    );
+    const projectResponse = await fetch(`${base}/api/landing-page`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: projectForm,
+    });
+    const projectJson = await projectResponse.json();
+    assert(projectResponse.status === 201 && projectJson.data.sectionKey === "projects", "creates a section from form data", projectJson);
+    assert(projectJson.data.items[0].title === "Harbor House", "parses items JSON from form data");
+
+    const projectUpdate = new FormData();
+    projectUpdate.append("title", "Selected projects");
+    projectUpdate.append("button[text]", "View all");
+    projectUpdate.append("button[link]", "#projects");
+    const projectUpdated = await fetch(`${base}/api/landing-page/projects`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+      body: projectUpdate,
+    });
+    const projectUpdatedJson = await projectUpdated.json();
+    assert(
+      projectUpdated.status === 200 && projectUpdatedJson.data.title === "Selected projects",
+      "updates a section from form data",
+      projectUpdatedJson
+    );
+    assert(projectUpdatedJson.data.button.text === "View all", "reads bracket fields from form data");
+
     const removed = await request("DELETE", "/api/landing-page/services");
     assert(removed.status === 200 && removed.json.data.sectionKey === "services", "deletes a section");
     const gone = await request("GET", "/api/landing-page/services");
