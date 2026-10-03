@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || "test-only-secret";
+
 const uri = "mongodb://127.0.0.1:27017/construction_site_cms_test";
 
 const assert = (condition, message, extra) => {
@@ -15,17 +17,26 @@ const start = async () => {
   await mongoose.connect(uri);
   const app = require("../app");
   const LandingPage = require("../models/LandingPage");
+  const User = require("../models/User");
   await LandingPage.deleteMany({});
+  await User.deleteMany({});
 
   const server = await new Promise((resolve) => {
     const instance = app.listen(0, "127.0.0.1", () => resolve(instance));
   });
   const base = `http://127.0.0.1:${server.address().port}`;
+  let token = "";
 
-  const request = async (method, path, body, { raw = false } = {}) => {
+  const request = async (method, path, body, { raw = false, auth = true } = {}) => {
+    const headers = { "Content-Type": "application/json" };
+
+    if (auth && token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${base}${path}`, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: raw ? body : body === undefined ? undefined : JSON.stringify(body),
     });
     const json = await response.json();
@@ -35,6 +46,37 @@ const start = async () => {
   try {
     const health = await request("GET", "/api/health");
     assert(health.status === 200 && health.json.status === true, "health check");
+
+    const locked = await request("GET", "/api/landing-page", undefined, { auth: false });
+    assert(locked.status === 401 && locked.json.message === "Authentication is required", "admin routes require login");
+
+    const account = {
+      name: "Site Admin",
+      email: "admin@example.com",
+      password: "password123",
+    };
+    const registered = await request("POST", "/api/auth/register", account);
+    assert(registered.status === 201 && registered.json.data.user.email === account.email, "registers a user", registered.json);
+    assert(registered.json.data.token && registered.json.data.user.password === undefined, "registration returns a token and hides the password");
+
+    const duplicateUser = await request("POST", "/api/auth/register", account);
+    assert(duplicateUser.status === 409 && duplicateUser.json.message === "Email is already registered", "rejects a duplicate email");
+
+    const badLogin = await request("POST", "/api/auth/login", {
+      email: account.email,
+      password: "wrong-password",
+    });
+    assert(badLogin.status === 401 && badLogin.json.message === "Invalid email or password", "rejects a wrong password");
+
+    const loggedIn = await request("POST", "/api/auth/login", {
+      email: account.email,
+      password: account.password,
+    });
+    assert(loggedIn.status === 200 && loggedIn.json.message === "Logged in successfully", "logs in");
+    token = loggedIn.json.data.token;
+
+    const profile = await request("GET", "/api/auth/me");
+    assert(profile.status === 200 && profile.json.data.email === account.email, "returns the current user");
 
     const empty = await request("GET", "/api/landing-page");
     assert(empty.status === 200 && empty.json.status === true && empty.json.data.length === 0, "empty admin list");
@@ -251,7 +293,11 @@ const start = async () => {
     const uploadForm = new FormData();
     uploadForm.append("sectionKey", "hero");
     uploadForm.append("image", new Blob([png], { type: "image/png" }), "pixel.png");
-    const uploadResponse = await fetch(`${base}/api/uploads`, { method: "POST", body: uploadForm });
+    const uploadResponse = await fetch(`${base}/api/uploads`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: uploadForm,
+    });
     const uploadJson = await uploadResponse.json();
     const cloudinaryReady = Boolean(
       process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET
@@ -266,7 +312,11 @@ const start = async () => {
 
     const textForm = new FormData();
     textForm.append("image", new Blob(["hello"], { type: "text/plain" }), "notes.txt");
-    const textUpload = await fetch(`${base}/api/uploads`, { method: "POST", body: textForm });
+    const textUpload = await fetch(`${base}/api/uploads`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: textForm,
+    });
     const textJson = await textUpload.json();
     assert(textUpload.status === 400, "rejects a non-image upload", textJson);
 

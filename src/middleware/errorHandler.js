@@ -15,6 +15,13 @@ const errorHandler = (err, req, res, next) => {
   }
 
   if (err.code === 11000 || err.errorResponse?.code === 11000) {
+    const keyPattern = err.keyPattern || err.errorResponse?.keyPattern || {};
+    const message = err.message || "";
+
+    if (keyPattern.email || message.includes("email")) {
+      return sendError(res, 409, "Email is already registered");
+    }
+
     return sendError(res, 409, "Landing page section already exists");
   }
 

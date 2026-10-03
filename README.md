@@ -59,7 +59,90 @@ docker compose up -d
 
 `npm run seed` inserts the 11 default sections. If documents already exist, run `npm run seed -- --force` to replace them.
 
-Admin routes are not authenticated. Put them behind auth before production. The public route is safe to expose.
+Admin routes and image uploads require a Bearer token from login or registration. `GET /api/public/landing-page` stays open.
+
+## Authentication
+
+Set `JWT_SECRET` in `.env` to a long random string. Tokens expire after `JWT_EXPIRES_IN` (default `7d`).
+
+### Register
+
+`POST /api/auth/register`
+
+```powershell
+curl.exe -X POST http://localhost:5000/api/auth/register -H "Content-Type: application/json" -d '{"name":"Site Admin","email":"admin@example.com","password":"password123"}'
+```
+
+`201`
+
+```json
+{
+  "status": true,
+  "message": "Registered successfully",
+  "data": {
+    "user": {
+      "name": "Site Admin",
+      "email": "admin@example.com"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+Password must be 8 to 72 characters. The password hash is never returned. A duplicate email returns `409`.
+
+### Login
+
+`POST /api/auth/login`
+
+```powershell
+curl.exe -X POST http://localhost:5000/api/auth/login -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"password123"}'
+```
+
+`200`
+
+```json
+{
+  "status": true,
+  "message": "Logged in successfully",
+  "data": {
+    "user": {
+      "name": "Site Admin",
+      "email": "admin@example.com"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+A wrong email or password returns `401` with message `Invalid email or password`.
+
+Send the token on admin and upload requests:
+
+```powershell
+curl.exe http://localhost:5000/api/landing-page -H "Authorization: Bearer TOKEN"
+```
+
+### Current user
+
+`GET /api/auth/me`
+
+```powershell
+curl.exe http://localhost:5000/api/auth/me -H "Authorization: Bearer TOKEN"
+```
+
+`200`
+
+```json
+{
+  "status": true,
+  "message": "Profile fetched successfully",
+  "data": {
+    "name": "Site Admin",
+    "email": "admin@example.com"
+  }
+}
+```
 
 ## Response format
 

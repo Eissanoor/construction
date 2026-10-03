@@ -1,6 +1,7 @@
 const express = require("express");
 const controller = require("../controllers/landingPageController");
 const { validate, requireSectionKey } = require("../middleware/validate");
+const requireAuth = require("../middleware/requireAuth");
 const {
   validateCreate,
   validateUpdate,
@@ -10,6 +11,8 @@ const {
 
 const adminRouter = express.Router();
 const publicRouter = express.Router();
+
+adminRouter.use(requireAuth);
 
 adminRouter.get("/config", controller.getEditorConfig);
 adminRouter.patch("/reorder", validate((req) => validateReorder(req.body)), controller.reorderSections);
