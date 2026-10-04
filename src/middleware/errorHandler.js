@@ -37,6 +37,20 @@ const errorHandler = (err, req, res, next) => {
     return sendError(res, 400, "Validation failed", [{ field: err.path, message: "Invalid value" }]);
   }
 
+  if (err.message === "MONGODB_URI is not defined") {
+    console.error(err);
+    return sendError(res, 503, "Database is not configured");
+  }
+
+  if (
+    err.name === "MongooseServerSelectionError" ||
+    err.name === "MongoServerSelectionError" ||
+    /buffering timed out/i.test(err.message || "")
+  ) {
+    console.error(err);
+    return sendError(res, 503, "Database is unavailable");
+  }
+
   console.error(err);
   return sendError(res, 500, "Internal server error");
 };
