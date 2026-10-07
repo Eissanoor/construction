@@ -1,7 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const { sendSuccess } = require("../utils/apiResponse");
-const { SECTION_KEYS } = require("../config/sectionConfig");
+const { isAllowedSectionKey } = require("../config/sectionConfig");
 const mediaService = require("../services/mediaService");
 
 const uploadImage = asyncHandler(async (req, res) => {
@@ -9,9 +9,9 @@ const uploadImage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Image file is required");
   }
 
-  const sectionKey = typeof req.body.sectionKey === "string" ? req.body.sectionKey.trim() : "";
+  const sectionKey = typeof req.body.sectionKey === "string" ? req.body.sectionKey.trim().toLowerCase() : "";
 
-  if (sectionKey && !SECTION_KEYS.includes(sectionKey)) {
+  if (sectionKey && !isAllowedSectionKey(sectionKey)) {
     throw new ApiError(400, "Invalid section key");
   }
 

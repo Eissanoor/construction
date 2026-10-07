@@ -149,4 +149,27 @@ const restoreEnv = (key, value) => {
 restoreEnv("CLOUDINARY_CLOUD_NAME", previousCloud);
 restoreEnv("CLOUDINARY_FOLDER", previousFolder);
 
+const faq = validateCreate({
+  sectionKey: "FAQ",
+  sectionName: "FAQ",
+  order: 11,
+  title: "Common questions",
+  items: [{ title: "Do you take small jobs?", description: "Yes." }],
+});
+assert.equal(faq.sectionKey, "faq");
+assert.equal(faq.sectionName, "FAQ");
+assert.equal(faq.items[0].title, "Do you take small jobs?");
+
+validateUpdate("faq", { title: "Updated questions" });
+
+assert.throws(
+  () => validateCreate({ sectionKey: "section_1", sectionName: "Section 1", order: 1, title: "No" }),
+  (error) => error.statusCode === 400 && error.message === "Invalid section key"
+);
+
+assert.throws(
+  () => validateCreate({ sectionKey: "sections", sectionName: "Sections", order: 12, title: "No" }),
+  (error) => error.statusCode === 400 && error.message === "Invalid section key"
+);
+
 console.log(`Validated ${defaultSections.length} landing page sections.`);

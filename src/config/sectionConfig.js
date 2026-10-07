@@ -1,15 +1,14 @@
 const Joi = require("joi");
 
 /**
- * Single extension point for landing-page sections.
+ * Built-in landing-page sections.
  *
- * To add a section:
- * 1. Add a definition to SECTION_DEFINITIONS.
- * 2. Optionally add default content in src/seed/defaultSections.js.
- * 3. Render the new sectionKey in the public frontend.
+ * Header, hero, about, and the other keys below keep their own fields.
+ * Any other slug, such as faq, is stored with the shared landing fields
+ * (title, description, image, button, items, settings).
  *
- * The model enum, Joi validation, and GET /api/landing-page/config
- * all follow this file. Section documents stay in the LandingPage collection.
+ * GET /api/landing-page/config lists the built-in sections only.
+ * Section documents stay in the LandingPage collection.
  */
 
 const text = (name, label, extra = {}) => ({
@@ -333,6 +332,21 @@ for (const [key, definition] of Object.entries(SECTION_DEFINITIONS)) {
 
 const SECTION_KEYS = Object.freeze(Object.keys(SECTION_DEFINITIONS));
 
+const RESERVED_SECTION_KEYS = new Set(["config", "reorder", "sections", "new"]);
+
+const SECTION_KEY_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+const isAllowedSectionKey = (sectionKey) => {
+  if (typeof sectionKey !== "string") return false;
+
+  const key = sectionKey.trim().toLowerCase();
+
+  if (key.length < 1 || key.length > 40) return false;
+  if (RESERVED_SECTION_KEYS.has(key)) return false;
+
+  return SECTION_KEY_PATTERN.test(key);
+};
+
 const getEditorConfig = () => {
   return Object.values(SECTION_DEFINITIONS)
     .map((section) => ({
@@ -355,5 +369,7 @@ const getEditorConfig = () => {
 module.exports = {
   SECTION_KEYS,
   SECTION_DEFINITIONS,
+  RESERVED_SECTION_KEYS,
+  isAllowedSectionKey,
   getEditorConfig,
 };

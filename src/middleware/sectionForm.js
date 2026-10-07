@@ -94,7 +94,12 @@ const normalizeSectionForm = (flat, files) => {
 
   for (const [key, value] of Object.entries(flat || {})) {
     if (Array.isArray(value)) {
-      throw new ApiError(400, `Duplicate form field: ${key}`);
+      const parsedList = value.every((entry) => entry && typeof entry === "object" && !Array.isArray(entry));
+      if (!parsedList) {
+        throw new ApiError(400, `Duplicate form field: ${key}`);
+      }
+      body[key] = value;
+      continue;
     }
 
     if (key === "settings" || key.startsWith("settings[")) {

@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { SECTION_KEYS } = require("../config/sectionConfig");
 
 const landingPageSchema = new mongoose.Schema(
   {
@@ -7,9 +6,11 @@ const landingPageSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      enum: SECTION_KEYS,
       immutable: true,
       trim: true,
+      lowercase: true,
+      maxlength: 40,
+      match: /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/,
     },
     sectionName: {
       type: String,

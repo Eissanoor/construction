@@ -1,6 +1,6 @@
 const Joi = require("joi");
 const ApiError = require("../utils/ApiError");
-const { SECTION_KEYS, SECTION_DEFINITIONS } = require("../config/sectionConfig");
+const { SECTION_KEYS, SECTION_DEFINITIONS, isAllowedSectionKey } = require("../config/sectionConfig");
 
 const SERVER_FIELDS = ["_id", "id", "__v", "createdAt", "updatedAt"];
 
@@ -17,10 +17,16 @@ const throwValidationError = (error) => {
 };
 
 const assertSectionKey = (sectionKey) => {
-  if (typeof sectionKey !== "string" || !SECTION_KEYS.includes(sectionKey)) {
+  if (!isAllowedSectionKey(sectionKey)) {
     throw new ApiError(400, "Invalid section key");
   }
 };
+
+const definitionFor = (sectionKey) =>
+  SECTION_DEFINITIONS[sectionKey] || {
+    sectionKey,
+    requiredOnCreate: [],
+  };
 
 const assertObjectBody = (body) => {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -132,9 +138,14 @@ const validateCreate = (body) => {
     throw new ApiError(400, "sectionKey is required");
   }
 
+  if (typeof payload.sectionKey === "string") {
+    payload.sectionKey = payload.sectionKey.trim().toLowerCase();
+  }
+
   assertSectionKey(payload.sectionKey);
 
-  const { error, value } = createSchemas[payload.sectionKey].validate(payload, validateOptions);
+  const schema = createSchemas[payload.sectionKey] || buildSchema(definitionFor(payload.sectionKey), "create");
+  const { error, value } = schema.validate(payload, validateOptions);
   if (error) {
     throwValidationError(error);
   }
@@ -143,13 +154,15 @@ const validateCreate = (body) => {
 };
 
 const validateUpdate = (sectionKey, body) => {
-  assertSectionKey(sectionKey);
+  const key = typeof sectionKey === "string" ? sectionKey.trim().toLowerCase() : sectionKey;
+  assertSectionKey(key);
   assertObjectBody(body);
 
   const payload = stripServerFields(body);
 
   if (Object.prototype.hasOwnProperty.call(payload, "sectionKey")) {
-    if (payload.sectionKey !== sectionKey) {
+    const incoming = typeof payload.sectionKey === "string" ? payload.sectionKey.trim().toLowerCase() : payload.sectionKey;
+    if (incoming !== key) {
       throw new ApiError(400, "sectionKey cannot be changed");
     }
     delete payload.sectionKey;
@@ -159,7 +172,8 @@ const validateUpdate = (sectionKey, body) => {
     throw new ApiError(400, "No fields to update");
   }
 
-  const { error, value } = updateSchemas[sectionKey].validate(payload, {
+  const schema = updateSchemas[key] || buildSchema(definitionFor(key), "update");
+  const { error, value } = schema.validate(payload, {
     ...validateOptions,
     noDefaults: true,
   });
@@ -176,7 +190,15 @@ const reorderSchema = Joi.object({
     .items(
       Joi.object({
         sectionKey: Joi.string()
-          .valid(...SECTION_KEYS)
+          .trim()
+          .lowercase()
+          .custom((value, helpers) => {
+            if (!isAllowedSectionKey(value)) {
+              return helpers.message("Invalid section key");
+            }
+
+            return value;
+          }, "section key")
           .required(),
         order: Joi.number().integer().min(0).required(),
       })
